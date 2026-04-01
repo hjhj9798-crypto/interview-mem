@@ -616,6 +616,17 @@ body {
   word-break: keep-all;
 }
 
+.line-kr-align-note {
+  font-size: 0.8125rem;
+  color: #9eb6d9;
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(80, 120, 180, 0.12);
+  border-radius: 6px;
+  border: 1px solid rgba(107, 143, 201, 0.35);
+  line-height: 1.45;
+}
+
 .line-kr-mismatch {
   font-size: 0.8125rem;
   color: var(--warn);

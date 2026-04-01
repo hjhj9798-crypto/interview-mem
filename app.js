@@ -63,16 +63,36 @@
       .filter(Boolean);
   }
 
+  /**
+   * 한국어는 줄 수가 영어와 달라도 됨: 부족하면 빈 줄로 채우고, 넘치면 잘라냄.
+   * @returns {{ aligned: string[], padded: boolean, truncated: boolean }}
+   */
+  function alignKrToEnLines(krText, enLineCount) {
+    const rows = String(krText || "")
+      .split(/\r?\n/)
+      .map((s) => s.trim());
+    const truncated = rows.length > enLineCount;
+    const aligned = rows.slice(0, enLineCount);
+    while (aligned.length < enLineCount) aligned.push("");
+    const padded = rows.length < enLineCount;
+    return { aligned, padded, truncated };
+  }
+
   /** 빈칸 퀴즈: 띄어쓰기 기준 토큰 */
   let blankQuizWords = [];
   /** @type {Set<number>} */
   let blankQuizBlankSet = new Set();
 
   function tokenizeWords(answer) {
-    return String(answer || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
+    const raw = String(answer || "")
+      .replace(/\r?\n/g, " ")
+      .trim();
+    let w = raw.split(/\s+/).filter(Boolean);
+    if (w.length === 0) {
+      const lines = splitAnswerLines(answer);
+      if (lines.length >= 1) return lines;
+    }
+    return w;
   }
 
   function pickBlankIndices(n) {
@@ -176,6 +196,7 @@
     lineKrPanel: document.getElementById("lineKrPanel"),
     lineKrText: document.getElementById("lineKrText"),
     lineKrMismatch: document.getElementById("lineKrMismatch"),
+    lineKrAlignNote: document.getElementById("lineKrAlignNote"),
     lineInstructionLine: document.getElementById("lineInstructionLine"),
     lineAttemptLabel: document.getElementById("lineAttemptLabel"),
     lineEnLabel: document.getElementById("lineEnLabel"),
@@ -301,19 +322,31 @@
   function updateLineQuizUI(entry, lines) {
     const total = lines.length;
     const cur = lines[lineIdx] || "";
-    const krLines = splitAnswerLines(entry.answerKr || "");
     const krRaw = String(entry.answerKr || "").trim();
-    const hasKr = krLines.length === lines.length && lines.length >= 2;
-    const mismatchKr = krRaw.length > 0 && krLines.length !== lines.length;
+    const { aligned: krAligned, padded, truncated } = alignKrToEnLines(entry.answerKr || "", total);
+    const hasKr =
+      total >= 2 && krRaw.length > 0 && krAligned.some((s) => s.length > 0);
 
     els.lineProgressText.textContent = `줄 ${lineIdx + 1} / ${total}`;
     els.lineRevealedText.textContent = cur;
 
     els.lineKrPanel.classList.toggle("hidden", !hasKr);
-    els.lineKrMismatch.classList.toggle("hidden", !mismatchKr || hasKr);
+    els.lineKrMismatch.classList.toggle("hidden", !truncated || !hasKr);
+    if (hasKr && padded) {
+      els.lineKrAlignNote.textContent =
+        "한국어 줄이 영어보다 적습니다. 비어 있는 줄은 한국어 없이 영어로만 말하기·적기 연습하면 됩니다.";
+      els.lineKrAlignNote.classList.remove("hidden");
+    } else if (hasKr && truncated) {
+      els.lineKrAlignNote.classList.add("hidden");
+    } else {
+      els.lineKrAlignNote.classList.add("hidden");
+    }
 
     if (hasKr) {
-      els.lineKrText.textContent = krLines[lineIdx] || "";
+      const krLine = krAligned[lineIdx] || "";
+      els.lineKrText.textContent =
+        krLine ||
+        "— (이 줄은 한국어 생략 — 위·아래 맥락만 보고 영어로 말해보세요)";
       els.lineInstructionLine.textContent =
         "한국어를 보고 영어로 말하거나, 아래에 영어로 적어보세요.";
       els.lineAttemptLabel.textContent = "영어로 번역해 적어보기 (선택)";

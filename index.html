@@ -111,8 +111,9 @@
                 <p class="line-kr-label">이번 줄 · 한국어 (번역 연습)</p>
                 <p class="line-kr-text" id="lineKrText"></p>
               </div>
+              <p class="line-kr-align-note hidden" id="lineKrAlignNote"></p>
               <p class="line-kr-mismatch hidden" id="lineKrMismatch">
-                한국어 줄 수가 영어 모범 답변과 같아야 합니다. 등록에서 줄바꿈 개수를 맞춰 주세요.
+                한국어가 영어 줄보다 깁니다. 뒷부분은 잘리고 앞줄만 사용됩니다.
               </p>
               <div class="line-mask-wrap" id="lineMaskWrap">
                 <p class="line-mask-label" id="lineEnLabel">이번 줄 · 영어</p>
@@ -216,7 +217,7 @@
             <label class="field">
               <span>한 줄씩용 한국어 (선택)</span>
               <textarea id="fieldAnswerKr" class="textarea" rows="8" placeholder="영어와 같은 줄 수로, 줄마다 한국어 번역을 적습니다."></textarea>
-              <span class="field-hint">영어 모범 답과 <strong>줄 개수·순서</strong>를 맞추면, 한 줄씩 모드에서 한국어를 보고 영어로 연습할 수 있습니다.</span>
+              <span class="field-hint">영어와 <strong>줄 수가 달라도 됩니다.</strong> 한국어가 더 짧으면 남는 영어 줄은 한국어 없이 연습하고, 더 길면 뒷줄은 잘립니다.</span>
             </label>
 
             <div class="form-actions">
