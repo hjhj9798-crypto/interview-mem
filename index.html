@@ -21,7 +21,7 @@
       <div class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
         <h1>Interview Trainer</h1>
-        <p class="tagline">질문 → 키워드만 보고 말하기 → 답 확인 · 한 줄씩 퀴즈</p>
+        <p class="tagline">질문 → 키워드만 보고 말하기 → 답 확인 · 한 줄씩 · 빈칸</p>
       </div>
       <nav class="tabs" role="tablist">
         <button type="button" class="tab is-active" data-tab="practice" role="tab" aria-selected="true">연습</button>
@@ -53,6 +53,7 @@
             <select id="practiceMode" class="select" title="연습 방식">
               <option value="full">전체 답변</option>
               <option value="byline">한 줄씩 (퀴즈)</option>
+              <option value="blank">빈칸 (퀴즈)</option>
             </select>
           </label>
           <span class="progress" id="progressText" aria-live="polite"></span>
@@ -104,15 +105,22 @@
             <div id="practiceBlockLine" class="hidden">
               <div class="line-quiz-head">
                 <p class="line-progress" id="lineProgressText" aria-live="polite"></p>
-                <p class="line-instruction">이 줄만 말로 연습한 뒤, 필요하면 아래에 적어보세요.</p>
+                <p class="line-instruction" id="lineInstructionLine">이 줄만 말로 연습한 뒤, 필요하면 아래에 적어보세요.</p>
               </div>
+              <div class="line-kr-panel hidden" id="lineKrPanel">
+                <p class="line-kr-label">이번 줄 · 한국어 (번역 연습)</p>
+                <p class="line-kr-text" id="lineKrText"></p>
+              </div>
+              <p class="line-kr-mismatch hidden" id="lineKrMismatch">
+                한국어 줄 수가 영어 모범 답변과 같아야 합니다. 등록에서 줄바꿈 개수를 맞춰 주세요.
+              </p>
               <div class="line-mask-wrap" id="lineMaskWrap">
-                <p class="line-mask-label">이번 줄</p>
+                <p class="line-mask-label" id="lineEnLabel">이번 줄 · 영어</p>
                 <div class="line-masked" id="lineMasked" aria-hidden="true">가려짐 — 「이 줄 확인」을 누르세요</div>
                 <pre class="answer-text line-revealed hidden" id="lineRevealedText"></pre>
               </div>
               <div class="try-block">
-                <label for="selfAttemptLine" class="try-label">이 줄에 해당하는 내용 (선택)</label>
+                <label for="selfAttemptLine" class="try-label" id="lineAttemptLabel">이 줄에 해당하는 내용 (선택)</label>
                 <textarea id="selfAttemptLine" class="textarea try-area" rows="3" placeholder="이번 줄을 영어로 적어보기…" spellcheck="true"></textarea>
               </div>
               <div class="actions-row actions-line">
@@ -133,6 +141,36 @@
                   <button type="button" class="btn btn-good" data-review-line="ok">맞았다 / 괜찮다</button>
                   <button type="button" class="btn btn-warn" data-review-line="partial">일부만 맞음</button>
                   <button type="button" class="btn btn-bad" data-review-line="miss">많이 틀림</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="practiceBlockBlank" class="hidden">
+              <div class="blank-quiz-head">
+                <p class="blank-progress" id="blankProgressMeta" aria-live="polite"></p>
+                <p class="blank-instruction">
+                  모범 답변을 <strong>띄어쓰기 기준 단어</strong>로 나누고, 무작위로 빈칸을 냅니다. 빈칸에 맞는 단어를 입력하세요.
+                </p>
+              </div>
+              <div class="blank-words-wrap" id="blankWordsWrap"></div>
+              <div class="blank-feedback hidden" id="blankFeedback" aria-live="polite"></div>
+              <div class="actions-row actions-blank">
+                <button type="button" class="btn btn-primary" id="btnCheckBlank">정답 확인</button>
+                <button type="button" class="btn btn-ghost" id="btnShuffleBlank">다시 출제</button>
+              </div>
+              <div class="answer-panel hidden" id="answerPanelBlank" aria-live="polite">
+                <div class="answer-head">
+                  <p class="answer-label">전체 모범 답변</p>
+                  <button type="button" class="btn-text" id="btnCopyAnswerBlank" title="복사">복사</button>
+                </div>
+                <pre class="answer-text" id="practiceAnswerBlank"></pre>
+              </div>
+              <div class="review-row hidden" id="reviewRowBlank">
+                <p class="review-prompt">빈칸 퀴즈는 어땠나요?</p>
+                <div class="review-btns">
+                  <button type="button" class="btn btn-good" data-review-blank="ok">맞았다 / 괜찮다</button>
+                  <button type="button" class="btn btn-warn" data-review-blank="partial">일부만 맞음</button>
+                  <button type="button" class="btn btn-bad" data-review-blank="miss">많이 틀림</button>
                 </div>
               </div>
             </div>
@@ -170,9 +208,15 @@
             </label>
 
             <label class="field">
-              <span>모범 답변 (전체)</span>
+              <span>모범 답변 (전체, 영어)</span>
               <textarea id="fieldAnswer" class="textarea" rows="8" required placeholder="Full answer in English..."></textarea>
-              <span class="field-hint">한 줄씩 퀴즈: 문장마다 <strong>Enter</strong>로 줄을 나누어 입력하세요.</span>
+              <span class="field-hint">한 줄씩: <strong>Enter</strong>로 줄 구분 · 빈칸: 띄어쓰기로 단어가 나뉜다고 보고 무작위 빈칸을 냅니다.</span>
+            </label>
+
+            <label class="field">
+              <span>한 줄씩용 한국어 (선택)</span>
+              <textarea id="fieldAnswerKr" class="textarea" rows="8" placeholder="영어와 같은 줄 수로, 줄마다 한국어 번역을 적습니다."></textarea>
+              <span class="field-hint">영어 모범 답과 <strong>줄 개수·순서</strong>를 맞추면, 한 줄씩 모드에서 한국어를 보고 영어로 연습할 수 있습니다.</span>
             </label>
 
             <div class="form-actions">

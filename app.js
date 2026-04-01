@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "interviewMemEntries_v1";
 
-  /** @typedef {{ id: string, tag: string, question: string, keywords: string[], answer: string, reviews?: { ok: number, partial: number, miss: number } }} Entry */
+  /** @typedef {{ id: string, tag: string, question: string, keywords: string[], answer: string, answerKr?: string, reviews?: { ok: number, partial: number, miss: number } }} Entry */
 
   function uid() {
     return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2);
@@ -36,6 +36,7 @@
       question: String(e.question || "").trim(),
       keywords,
       answer: String(e.answer || "").trim(),
+      answerKr: e.answerKr != null ? String(e.answerKr) : "",
       reviews: e.reviews && typeof e.reviews === "object" ? e.reviews : { ok: 0, partial: 0, miss: 0 },
     };
   }
@@ -60,6 +61,67 @@
       .split(/\r?\n/)
       .map((s) => s.trim())
       .filter(Boolean);
+  }
+
+  /** 빈칸 퀴즈: 띄어쓰기 기준 토큰 */
+  let blankQuizWords = [];
+  /** @type {Set<number>} */
+  let blankQuizBlankSet = new Set();
+
+  function tokenizeWords(answer) {
+    return String(answer || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  function pickBlankIndices(n) {
+    if (n <= 0) return [];
+    if (n === 1) return [0];
+    let k = Math.max(1, Math.round(n * 0.35));
+    k = Math.min(k, n - 1);
+    const shuffled = shuffle([...Array(n).keys()]);
+    return shuffled.slice(0, k).sort((a, b) => a - b);
+  }
+
+  function wordMatch(user, expected) {
+    return String(user || "").trim().toLowerCase() === String(expected || "").trim().toLowerCase();
+  }
+
+  function renderBlankInputs(words, blankSet) {
+    els.blankWordsWrap.innerHTML = "";
+    words.forEach((w, i) => {
+      if (i > 0) {
+        els.blankWordsWrap.appendChild(document.createTextNode(" "));
+      }
+      if (blankSet.has(i)) {
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.className = "blank-input";
+        inp.dataset.index = String(i);
+        inp.setAttribute("autocomplete", "off");
+        inp.setAttribute("spellcheck", "true");
+        inp.placeholder = "…";
+        els.blankWordsWrap.appendChild(inp);
+      } else {
+        const span = document.createElement("span");
+        span.className = "blank-visible-word";
+        span.textContent = w;
+        els.blankWordsWrap.appendChild(span);
+      }
+    });
+  }
+
+  function setupBlankQuiz(entry, words) {
+    blankQuizWords = words;
+    blankQuizBlankSet = new Set(pickBlankIndices(words.length));
+    renderBlankInputs(words, blankQuizBlankSet);
+    els.blankProgressMeta.textContent = `빈칸 ${blankQuizBlankSet.size}개 · 전체 ${words.length}단어`;
+    els.blankFeedback.textContent = "";
+    els.blankFeedback.classList.add("hidden");
+    els.answerPanelBlank.classList.add("hidden");
+    els.reviewRowBlank.classList.add("hidden");
+    els.practiceAnswerBlank.textContent = entry.answer;
   }
 
   const els = {
@@ -90,6 +152,7 @@
     fieldQuestion: document.getElementById("fieldQuestion"),
     fieldKeywords: document.getElementById("fieldKeywords"),
     fieldAnswer: document.getElementById("fieldAnswer"),
+    fieldAnswerKr: document.getElementById("fieldAnswerKr"),
     btnCancelEdit: document.getElementById("btnCancelEdit"),
     entryList: document.getElementById("entryList"),
     entryCount: document.getElementById("entryCount"),
@@ -110,6 +173,22 @@
     practiceAnswerLine: document.getElementById("practiceAnswerLine"),
     reviewRowLine: document.getElementById("reviewRowLine"),
     btnCopyAnswerLine: document.getElementById("btnCopyAnswerLine"),
+    lineKrPanel: document.getElementById("lineKrPanel"),
+    lineKrText: document.getElementById("lineKrText"),
+    lineKrMismatch: document.getElementById("lineKrMismatch"),
+    lineInstructionLine: document.getElementById("lineInstructionLine"),
+    lineAttemptLabel: document.getElementById("lineAttemptLabel"),
+    lineEnLabel: document.getElementById("lineEnLabel"),
+    practiceBlockBlank: document.getElementById("practiceBlockBlank"),
+    blankWordsWrap: document.getElementById("blankWordsWrap"),
+    blankFeedback: document.getElementById("blankFeedback"),
+    blankProgressMeta: document.getElementById("blankProgressMeta"),
+    btnCheckBlank: document.getElementById("btnCheckBlank"),
+    btnShuffleBlank: document.getElementById("btnShuffleBlank"),
+    answerPanelBlank: document.getElementById("answerPanelBlank"),
+    practiceAnswerBlank: document.getElementById("practiceAnswerBlank"),
+    reviewRowBlank: document.getElementById("reviewRowBlank"),
+    btnCopyAnswerBlank: document.getElementById("btnCopyAnswerBlank"),
   };
 
   function getFilteredEntries() {
@@ -176,8 +255,12 @@
     });
 
     const lines = splitAnswerLines(entry.answer);
-    const wantByline = els.practiceMode.value === "byline";
+    const words = tokenizeWords(entry.answer);
+    const mode = els.practiceMode.value;
+    const wantByline = mode === "byline";
     const useByline = wantByline && lines.length >= 2;
+    const wantBlank = mode === "blank";
+    const useBlank = wantBlank && words.length >= 1;
 
     if (lastLineQuizEntryId !== entry.id) {
       lineIdx = 0;
@@ -191,11 +274,18 @@
     if (useByline) {
       els.practiceBlockFull.classList.add("hidden");
       els.practiceBlockLine.classList.remove("hidden");
+      els.practiceBlockBlank.classList.add("hidden");
       els.practiceAnswerLine.textContent = entry.answer;
       updateLineQuizUI(entry, lines);
+    } else if (useBlank) {
+      els.practiceBlockFull.classList.add("hidden");
+      els.practiceBlockLine.classList.add("hidden");
+      els.practiceBlockBlank.classList.remove("hidden");
+      setupBlankQuiz(entry, words);
     } else {
       els.practiceBlockFull.classList.remove("hidden");
       els.practiceBlockLine.classList.add("hidden");
+      els.practiceBlockBlank.classList.add("hidden");
       els.selfAttempt.value = "";
       els.practiceAnswer.textContent = entry.answer;
       els.answerPanel.classList.add("hidden");
@@ -211,8 +301,35 @@
   function updateLineQuizUI(entry, lines) {
     const total = lines.length;
     const cur = lines[lineIdx] || "";
+    const krLines = splitAnswerLines(entry.answerKr || "");
+    const krRaw = String(entry.answerKr || "").trim();
+    const hasKr = krLines.length === lines.length && lines.length >= 2;
+    const mismatchKr = krRaw.length > 0 && krLines.length !== lines.length;
+
     els.lineProgressText.textContent = `줄 ${lineIdx + 1} / ${total}`;
     els.lineRevealedText.textContent = cur;
+
+    els.lineKrPanel.classList.toggle("hidden", !hasKr);
+    els.lineKrMismatch.classList.toggle("hidden", !mismatchKr || hasKr);
+
+    if (hasKr) {
+      els.lineKrText.textContent = krLines[lineIdx] || "";
+      els.lineInstructionLine.textContent =
+        "한국어를 보고 영어로 말하거나, 아래에 영어로 적어보세요.";
+      els.lineAttemptLabel.textContent = "영어로 번역해 적어보기 (선택)";
+      els.lineEnLabel.textContent = "이번 줄 · 영어 (확인 전 숨김)";
+      if (!lineRevealed) {
+        els.lineMasked.textContent = "영어 문장은 숨김 — 「이 줄 확인」으로 공개";
+      }
+    } else {
+      els.lineInstructionLine.textContent =
+        "이 줄만 말로 연습한 뒤, 필요하면 아래에 적어보세요.";
+      els.lineAttemptLabel.textContent = "이 줄에 해당하는 내용 (선택)";
+      els.lineEnLabel.textContent = "이번 줄 · 영어";
+      if (!lineRevealed) {
+        els.lineMasked.textContent = "가려짐 — 「이 줄 확인」을 누르세요";
+      }
+    }
 
     if (lineRevealed) {
       els.lineMasked.classList.add("hidden");
@@ -338,6 +455,7 @@
     els.fieldQuestion.value = e.question;
     els.fieldKeywords.value = e.keywords.join(", ");
     els.fieldAnswer.value = e.answer;
+    els.fieldAnswerKr.value = e.answerKr != null ? e.answerKr : "";
     els.formTitle.textContent = "항목 편집";
     els.btnCancelEdit.classList.remove("hidden");
     els.fieldQuestion.focus();
@@ -488,6 +606,64 @@
     }
   });
 
+  els.btnCheckBlank.addEventListener("click", () => {
+    const inputs = els.blankWordsWrap.querySelectorAll("input.blank-input");
+    let correct = 0;
+    const total = inputs.length;
+    inputs.forEach((inp) => {
+      const i = Number(inp.dataset.index);
+      const expected = blankQuizWords[i];
+      inp.classList.remove("blank-correct", "blank-wrong");
+      if (wordMatch(inp.value, expected)) {
+        inp.classList.add("blank-correct");
+        inp.removeAttribute("title");
+        correct++;
+      } else {
+        inp.classList.add("blank-wrong");
+        inp.title = "정답: " + expected;
+      }
+    });
+    els.blankFeedback.textContent =
+      total > 0
+        ? `빈칸 ${total}개 중 ${correct}개 일치. 틀린 칸은 입력란에 마우스를 올리면 정답 힌트가 보입니다.`
+        : "";
+    els.blankFeedback.classList.remove("hidden");
+    els.answerPanelBlank.classList.remove("hidden");
+    els.reviewRowBlank.classList.remove("hidden");
+  });
+
+  els.btnShuffleBlank.addEventListener("click", () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    if (!entry) return;
+    const w = tokenizeWords(entry.answer);
+    setupBlankQuiz(entry, w);
+  });
+
+  els.reviewRowBlank.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-review-blank]");
+    if (!btn) return;
+    const kind = btn.getAttribute("data-review-blank");
+    const id = practiceOrder[practiceIndex];
+    if (id && kind) recordReview(id, kind);
+    nextQuestion(true);
+  });
+
+  els.btnCopyAnswerBlank.addEventListener("click", async () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    const text = entry ? entry.answer : "";
+    try {
+      await navigator.clipboard.writeText(text);
+      els.btnCopyAnswerBlank.textContent = "복사됨";
+      setTimeout(() => {
+        els.btnCopyAnswerBlank.textContent = "복사";
+      }, 1500);
+    } catch {
+      els.btnCopyAnswerBlank.textContent = "복사 실패";
+    }
+  });
+
   els.entryForm.addEventListener("submit", (ev) => {
     ev.preventDefault();
     const tag = els.fieldTag.value.trim();
@@ -497,6 +673,7 @@
       .map((s) => s.trim())
       .filter(Boolean);
     const answer = els.fieldAnswer.value.trim();
+    const answerKr = els.fieldAnswerKr.value;
     if (!question || keywords.length === 0 || !answer) {
       alert("질문, 키워드, 모범 답변을 모두 입력해 주세요.");
       return;
@@ -512,6 +689,7 @@
           question,
           keywords,
           answer,
+          answerKr,
         };
       }
     } else {
@@ -521,6 +699,7 @@
         question,
         keywords,
         answer,
+        answerKr,
         reviews: { ok: 0, partial: 0, miss: 0 },
       });
     }

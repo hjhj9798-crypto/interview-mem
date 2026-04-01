@@ -592,6 +592,40 @@ body {
   color: var(--accent);
 }
 
+.line-kr-panel {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  background: rgba(80, 120, 180, 0.12);
+  border-radius: 8px;
+  border-left: 3px solid #6b8fc9;
+}
+
+.line-kr-label {
+  font-size: 0.75rem;
+  color: #9eb6d9;
+  margin: 0 0 0.45rem;
+}
+
+.line-kr-text {
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #e8ecf4;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.line-kr-mismatch {
+  font-size: 0.8125rem;
+  color: var(--warn);
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(201, 138, 42, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(201, 138, 42, 0.35);
+}
+
 .line-quiz-head {
   margin-bottom: 0.75rem;
 }
@@ -639,4 +673,88 @@ body {
 
 .actions-line {
   flex-wrap: wrap;
+}
+
+.blank-quiz-head {
+  margin-bottom: 0.85rem;
+}
+
+.blank-progress {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 0.35rem;
+}
+
+.blank-instruction {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.blank-instruction strong {
+  color: #c5cad6;
+}
+
+.blank-words-wrap {
+  font-family: var(--font-en);
+  font-size: 1.02rem;
+  line-height: 1.85;
+  margin-bottom: 0.5rem;
+  padding: 1rem 1.1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.25rem;
+}
+
+.blank-visible-word {
+  color: #dce1ea;
+}
+
+.blank-input {
+  font-family: var(--font-en);
+  font-size: 1rem;
+  min-width: 4.5rem;
+  max-width: 100%;
+  flex: 1 1 6rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+
+.blank-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.blank-input.blank-correct {
+  border-color: rgba(61, 154, 106, 0.7);
+  background: rgba(61, 154, 106, 0.1);
+}
+
+.blank-input.blank-wrong {
+  border-color: rgba(201, 74, 74, 0.65);
+  background: rgba(201, 74, 74, 0.08);
+}
+
+.blank-feedback {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.actions-blank {
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
 }
