@@ -87,6 +87,7 @@
   let blankLineIdx = 0;
   let blankLineChecked = false;
   let lastBlankEntryId = "";
+  let blankHintVisible = false;
 
   function getEntryKr(entry) {
     if (!entry) return "";
@@ -120,6 +121,53 @@
     return String(user || "").trim().toLowerCase() === String(expected || "").trim().toLowerCase();
   }
 
+  /** 빈칸 퀴즈: 띄어쓰기·구두점 무시하고 비교 */
+  function blankMatchLenient(user, expected) {
+    function normalize(s) {
+      return String(s || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/[.,!?;:·…'"()[\]{}—–\-]/g, "");
+    }
+    return normalize(user) === normalize(expected);
+  }
+
+  /** 힌트: 단어 길이의 약 1/3만큼 앞쪽 스펠링 + 나머지는 · */
+  function hintFirstLetters(word) {
+    const w = String(word || "");
+    const n = w.length;
+    if (n === 0) return "";
+    const showLen = Math.max(1, Math.ceil(n / 3));
+    const prefix = w.slice(0, Math.min(showLen, n));
+    const rest = n - prefix.length;
+    return rest > 0 ? prefix + "·".repeat(rest) : prefix;
+  }
+
+  function updateBlankHintButton() {
+    if (els.btnHintBlank) {
+      els.btnHintBlank.textContent = blankHintVisible ? "힌트 숨기기" : "힌트 보기";
+    }
+  }
+
+  function applyBlankHints() {
+    els.blankWordsWrap.querySelectorAll(".blank-input-cluster").forEach((cluster) => {
+      const inp = cluster.querySelector("input.blank-input");
+      const hint = cluster.querySelector(".blank-hint");
+      if (!inp || !hint) return;
+      const i = Number(inp.dataset.index);
+      const w = blankQuizWords[i];
+      if (blankHintVisible) {
+        hint.textContent = hintFirstLetters(w);
+        hint.hidden = false;
+      } else {
+        hint.textContent = "";
+        hint.hidden = true;
+      }
+    });
+  }
+
   function renderBlankInputs(words, blankSet) {
     els.blankWordsWrap.innerHTML = "";
     words.forEach((w, i) => {
@@ -127,6 +175,8 @@
         els.blankWordsWrap.appendChild(document.createTextNode(" "));
       }
       if (blankSet.has(i)) {
+        const cluster = document.createElement("span");
+        cluster.className = "blank-input-cluster";
         const inp = document.createElement("input");
         inp.type = "text";
         inp.className = "blank-input";
@@ -134,7 +184,16 @@
         inp.setAttribute("autocomplete", "off");
         inp.setAttribute("spellcheck", "true");
         inp.placeholder = "…";
-        els.blankWordsWrap.appendChild(inp);
+        cluster.appendChild(inp);
+        const hint = document.createElement("span");
+        hint.className = "blank-hint";
+        hint.hidden = true;
+        cluster.appendChild(hint);
+        const reveal = document.createElement("span");
+        reveal.className = "blank-reveal";
+        reveal.hidden = true;
+        cluster.appendChild(reveal);
+        els.blankWordsWrap.appendChild(cluster);
       } else {
         const span = document.createElement("span");
         span.className = "blank-visible-word";
@@ -142,6 +201,7 @@
         els.blankWordsWrap.appendChild(span);
       }
     });
+    if (blankHintVisible) applyBlankHints();
   }
 
   function setupBlankQuizByLine(entry) {
@@ -158,6 +218,11 @@
 
   function renderCurrentBlankLine(entry) {
     blankLineChecked = false;
+    blankHintVisible = false;
+    updateBlankHintButton();
+    if (els.blankLineRevealBox) els.blankLineRevealBox.classList.add("hidden");
+    if (els.btnHintBlank) els.btnHintBlank.disabled = false;
+
     const totalLines = blankQuizAnswerLines.length;
     const lineText = String(blankQuizAnswerLines[blankLineIdx] || "");
     const words = tokenizeWords(lineText);
@@ -174,6 +239,7 @@
       els.blankWordsWrap.appendChild(p);
       blankQuizWords = [];
       blankQuizBlankSet = new Set();
+      if (els.btnHintBlank) els.btnHintBlank.disabled = true;
     } else {
       blankQuizWords = words;
       blankQuizBlankSet = new Set(pickBlankIndices(words.length));
@@ -187,6 +253,20 @@
     els.blankFeedback.classList.add("hidden");
     els.practiceAnswerBlank.textContent = entry.answer;
 
+    const krRaw = getEntryKr(entry).trim();
+    const { aligned: krAligned } = alignKrToEnLines(getEntryKr(entry), totalLines);
+    const hasKrBlank =
+      krRaw.length > 0 && krAligned.some((s) => String(s).trim().length > 0);
+    if (els.blankKrPanel && els.blankKrText) {
+      if (hasKrBlank) {
+        els.blankKrPanel.classList.remove("hidden");
+        const k = String(krAligned[blankLineIdx] || "").trim();
+        els.blankKrText.textContent = k || "— (이 줄 한국어 생략)";
+      } else {
+        els.blankKrPanel.classList.add("hidden");
+      }
+    }
+
     const isLast = blankLineIdx >= totalLines - 1;
     if (isLast && nw === 0) {
       blankLineChecked = true;
@@ -194,6 +274,7 @@
       els.reviewRowBlank.classList.remove("hidden");
       els.btnCheckBlank.disabled = true;
       els.btnShuffleBlank.disabled = true;
+      if (els.btnHintBlank) els.btnHintBlank.disabled = true;
       els.btnNextBlankLine.classList.add("hidden");
     } else {
       els.answerPanelBlank.classList.add("hidden");
@@ -285,6 +366,11 @@
     btnShuffleBlank: document.getElementById("btnShuffleBlank"),
     btnPrevBlankLine: document.getElementById("btnPrevBlankLine"),
     btnNextBlankLine: document.getElementById("btnNextBlankLine"),
+    btnHintBlank: document.getElementById("btnHintBlank"),
+    blankLineRevealBox: document.getElementById("blankLineRevealBox"),
+    blankLineRevealText: document.getElementById("blankLineRevealText"),
+    blankKrPanel: document.getElementById("blankKrPanel"),
+    blankKrText: document.getElementById("blankKrText"),
     answerPanelBlank: document.getElementById("answerPanelBlank"),
     practiceAnswerBlank: document.getElementById("practiceAnswerBlank"),
     reviewRowBlank: document.getElementById("reviewRowBlank"),
@@ -744,19 +830,29 @@
       const i = Number(inp.dataset.index);
       const expected = blankQuizWords[i];
       inp.classList.remove("blank-correct", "blank-wrong");
-      if (wordMatch(inp.value, expected)) {
+      const cluster = inp.closest(".blank-input-cluster");
+      const revealEl = cluster && cluster.querySelector(".blank-reveal");
+      if (revealEl) {
+        revealEl.textContent = "정답: " + expected;
+        revealEl.hidden = false;
+      }
+      if (blankMatchLenient(inp.value, expected)) {
         inp.classList.add("blank-correct");
         inp.removeAttribute("title");
         correct++;
       } else {
         inp.classList.add("blank-wrong");
-        inp.title = "정답: " + expected;
+        inp.removeAttribute("title");
       }
     });
+    if (els.blankLineRevealBox && els.blankLineRevealText) {
+      els.blankLineRevealText.textContent = String(blankQuizAnswerLines[blankLineIdx] || "");
+      els.blankLineRevealBox.classList.remove("hidden");
+    }
     blankLineChecked = true;
     const totalLines = blankQuizAnswerLines.length;
     const isLast = blankLineIdx >= totalLines - 1;
-    els.blankFeedback.textContent = `빈칸 ${totalInp}개 중 ${correct}개 일치. 틀린 칸은 입력란에 마우스를 올리면 정답 힌트가 보입니다.`;
+    els.blankFeedback.textContent = `빈칸 ${totalInp}개 중 ${correct}개 일치. 아래에 이번 줄·빈칸별 정답이 표시됩니다.`;
     els.blankFeedback.classList.remove("hidden");
     if (isLast && entry) {
       els.answerPanelBlank.classList.remove("hidden");
@@ -775,6 +871,9 @@
     const lineText = String(blankQuizAnswerLines[blankLineIdx] || "");
     const words = tokenizeWords(lineText);
     if (words.length === 0) return;
+    blankHintVisible = false;
+    updateBlankHintButton();
+    if (els.blankLineRevealBox) els.blankLineRevealBox.classList.add("hidden");
     blankQuizWords = words;
     blankQuizBlankSet = new Set(pickBlankIndices(words.length));
     renderBlankInputs(words, blankQuizBlankSet);
@@ -785,6 +884,13 @@
     const nw = words.length;
     els.blankProgressMeta.textContent = `줄 ${blankLineIdx + 1} / ${totalLines} · 이번 줄 빈칸 ${nb}개 · 단어 ${nw}개`;
     updateBlankLineNav();
+  });
+
+  els.btnHintBlank.addEventListener("click", () => {
+    if (els.blankWordsWrap.querySelectorAll("input.blank-input").length === 0) return;
+    blankHintVisible = !blankHintVisible;
+    updateBlankHintButton();
+    applyBlankHints();
   });
 
   els.btnNextBlankLine.addEventListener("click", () => {
