@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c0e12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Interview Q&A Trainer</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1>Interview Trainer</h1>
+        <p class="tagline">질문 → 키워드만 보고 말하기 → 답 확인</p>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab is-active" data-tab="practice" role="tab" aria-selected="true">연습</button>
+        <button type="button" class="tab" data-tab="manage" role="tab" aria-selected="false">등록 · 편집</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Practice -->
+      <section id="panel-practice" class="panel is-visible" aria-labelledby="practice-heading">
+        <h2 id="practice-heading" class="sr-only">연습</h2>
+
+        <div class="practice-toolbar">
+          <label class="field-inline">
+            <span>순서</span>
+            <select id="orderMode" class="select">
+              <option value="sequential">순서대로</option>
+              <option value="random">무작위</option>
+            </select>
+          </label>
+          <label class="field-inline">
+            <span>필터</span>
+            <select id="filterTag" class="select">
+              <option value="">전체</option>
+            </select>
+          </label>
+          <span class="progress" id="progressText" aria-live="polite"></span>
+        </div>
+
+        <div class="card practice-card" id="practiceCard">
+          <p class="empty-hint" id="emptyPractice">등록된 항목이 없습니다. 「등록 · 편집」에서 질문과 답을 추가하세요.</p>
+
+          <div class="practice-body hidden" id="practiceBody">
+            <p class="q-label">Question</p>
+            <h3 class="question" id="practiceQuestion"></h3>
+
+            <div class="keywords-block">
+              <p class="kw-label">Keywords only</p>
+              <ul class="keywords" id="practiceKeywords"></ul>
+            </div>
+
+            <div class="try-block">
+              <label for="selfAttempt" class="try-label">말로 연습한 뒤, 필요하면 여기에 적어보기 (선택)</label>
+              <textarea id="selfAttempt" class="textarea try-area" rows="4" placeholder="영어로 떠올린 답을 적어보면 비교하기 쉽습니다." spellcheck="true"></textarea>
+            </div>
+
+            <div class="actions-row">
+              <button type="button" class="btn btn-primary" id="btnReveal">모범 답변 확인</button>
+              <button type="button" class="btn btn-ghost" id="btnSkip">다음</button>
+            </div>
+
+            <div class="answer-panel hidden" id="answerPanel" aria-live="polite">
+              <div class="answer-head">
+                <p class="answer-label">모범 답변</p>
+                <button type="button" class="btn-text" id="btnCopyAnswer" title="복사">복사</button>
+              </div>
+              <pre class="answer-text" id="practiceAnswer"></pre>
+            </div>
+
+            <div class="review-row hidden" id="reviewRow">
+              <p class="review-prompt">스스로와 비교했을 때 어땠나요?</p>
+              <div class="review-btns">
+                <button type="button" class="btn btn-good" data-review="ok">맞았다 / 괜찮다</button>
+                <button type="button" class="btn btn-warn" data-review="partial">일부만 맞음</button>
+                <button type="button" class="btn btn-bad" data-review="miss">많이 틀림</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-footer hidden" id="navFooter">
+          <button type="button" class="btn btn-ghost" id="btnPrev" disabled>이전</button>
+          <button type="button" class="btn" id="btnNext">다음 질문</button>
+        </div>
+      </section>
+
+      <!-- Manage -->
+      <section id="panel-manage" class="panel hidden" aria-labelledby="manage-heading">
+        <h2 id="manage-heading" class="sr-only">등록 및 편집</h2>
+
+        <div class="manage-grid">
+          <form class="form-card" id="entryForm" autocomplete="off">
+            <h3 class="form-title" id="formTitle">새 항목 추가</h3>
+            <input type="hidden" id="editId" value="" />
+
+            <label class="field">
+              <span>태그 (선택, 예: behavioral, technical)</span>
+              <input type="text" id="fieldTag" class="input" placeholder="behavioral" />
+            </label>
+
+            <label class="field">
+              <span>질문 (영어)</span>
+              <textarea id="fieldQuestion" class="textarea" rows="3" required placeholder="Tell me about yourself."></textarea>
+            </label>
+
+            <label class="field">
+              <span>키워드 (쉼표 또는 줄바꿈으로 구분)</span>
+              <textarea id="fieldKeywords" class="textarea" rows="3" required placeholder="background, motivation, this role"></textarea>
+            </label>
+
+            <label class="field">
+              <span>모범 답변 (전체)</span>
+              <textarea id="fieldAnswer" class="textarea" rows="8" required placeholder="Full answer in English..."></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="btnSave">저장</button>
+              <button type="button" class="btn btn-ghost hidden" id="btnCancelEdit">취소</button>
+            </div>
+          </form>
+
+          <div class="list-card">
+            <div class="list-head">
+              <h3>저장된 항목 <span class="count" id="entryCount">0</span></h3>
+              <div class="list-tools">
+                <button type="button" class="btn-text" id="btnExport">JSON 내보내기</button>
+                <label class="btn-text file-pick">
+                  JSON 가져오기
+                  <input type="file" id="importFile" accept="application/json,.json" hidden />
+                </label>
+              </div>
+            </div>
+            <ul class="entry-list" id="entryList"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>데이터는 이 브라우저에만 저장됩니다. 백업은 「JSON 내보내기」를 사용하세요.</p>
+      <p class="footer-note">
+        폰에서 쓰기: PC와 같은 Wi-Fi면 브라우저 주소창에 <code>http://(PC IP):포트</code>로 접속하거나, GitHub Pages·Netlify 등에 올린 뒤 그 주소를 열면 됩니다. 홈 화면에 추가해 앱처럼 쓸 수 있어요.
+      </p>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

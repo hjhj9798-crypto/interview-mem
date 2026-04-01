@@ -1,0 +1,19 @@
+{
+  "name": "Interview Q&A Trainer",
+  "short_name": "Interview",
+  "description": "질문과 키워드로 영어 면접 답변 연습",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c0e12",
+  "theme_color": "#0c0e12",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
