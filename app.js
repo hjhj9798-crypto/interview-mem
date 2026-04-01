@@ -50,6 +50,17 @@
   let practiceOrder = [];
   /** 순서/필터가 바뀌면 true로 두고, rebuildPracticeOrder에서만 갱신 */
   let orderDirty = true;
+  /** 한 줄씩 모드: 현재 질문 내 줄 인덱스, 가림 여부 */
+  let lineIdx = 0;
+  let lineRevealed = false;
+  let lastLineQuizEntryId = "";
+
+  function splitAnswerLines(answer) {
+    return String(answer || "")
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
 
   const els = {
     tabs: document.querySelectorAll(".tab"),
@@ -84,6 +95,21 @@
     entryCount: document.getElementById("entryCount"),
     btnExport: document.getElementById("btnExport"),
     importFile: document.getElementById("importFile"),
+    practiceMode: document.getElementById("practiceMode"),
+    practiceBlockFull: document.getElementById("practiceBlockFull"),
+    practiceBlockLine: document.getElementById("practiceBlockLine"),
+    bylineFallbackHint: document.getElementById("bylineFallbackHint"),
+    lineProgressText: document.getElementById("lineProgressText"),
+    lineMasked: document.getElementById("lineMasked"),
+    lineRevealedText: document.getElementById("lineRevealedText"),
+    selfAttemptLine: document.getElementById("selfAttemptLine"),
+    btnRevealLine: document.getElementById("btnRevealLine"),
+    btnPrevLine: document.getElementById("btnPrevLine"),
+    btnNextLine: document.getElementById("btnNextLine"),
+    answerPanelLine: document.getElementById("answerPanelLine"),
+    practiceAnswerLine: document.getElementById("practiceAnswerLine"),
+    reviewRowLine: document.getElementById("reviewRowLine"),
+    btnCopyAnswerLine: document.getElementById("btnCopyAnswerLine"),
   };
 
   function getFilteredEntries() {
@@ -149,15 +175,74 @@
       els.practiceKeywords.appendChild(li);
     });
 
-    els.selfAttempt.value = "";
-    els.practiceAnswer.textContent = entry.answer;
-    els.answerPanel.classList.add("hidden");
-    els.reviewRow.classList.add("hidden");
-    els.btnReveal.disabled = false;
+    const lines = splitAnswerLines(entry.answer);
+    const wantByline = els.practiceMode.value === "byline";
+    const useByline = wantByline && lines.length >= 2;
+
+    if (lastLineQuizEntryId !== entry.id) {
+      lineIdx = 0;
+      lineRevealed = false;
+      lastLineQuizEntryId = entry.id;
+      els.selfAttemptLine.value = "";
+    }
+
+    els.bylineFallbackHint.classList.toggle("hidden", !wantByline || useByline);
+
+    if (useByline) {
+      els.practiceBlockFull.classList.add("hidden");
+      els.practiceBlockLine.classList.remove("hidden");
+      els.practiceAnswerLine.textContent = entry.answer;
+      updateLineQuizUI(entry, lines);
+    } else {
+      els.practiceBlockFull.classList.remove("hidden");
+      els.practiceBlockLine.classList.add("hidden");
+      els.selfAttempt.value = "";
+      els.practiceAnswer.textContent = entry.answer;
+      els.answerPanel.classList.add("hidden");
+      els.reviewRow.classList.add("hidden");
+      els.btnReveal.disabled = false;
+    }
 
     els.progressText.textContent = `${practiceIndex + 1} / ${practiceOrder.length}`;
     els.btnPrev.disabled = practiceIndex <= 0;
     els.btnNext.textContent = practiceIndex >= practiceOrder.length - 1 ? "처음으로" : "다음 질문";
+  }
+
+  function updateLineQuizUI(entry, lines) {
+    const total = lines.length;
+    const cur = lines[lineIdx] || "";
+    els.lineProgressText.textContent = `줄 ${lineIdx + 1} / ${total}`;
+    els.lineRevealedText.textContent = cur;
+
+    if (lineRevealed) {
+      els.lineMasked.classList.add("hidden");
+      els.lineRevealedText.classList.remove("hidden");
+      els.btnRevealLine.disabled = true;
+    } else {
+      els.lineMasked.classList.remove("hidden");
+      els.lineRevealedText.classList.add("hidden");
+      els.btnRevealLine.disabled = false;
+    }
+
+    els.btnPrevLine.disabled = lineIdx <= 0;
+
+    const isLast = lineIdx >= total - 1;
+    if (lineRevealed && isLast) {
+      els.answerPanelLine.classList.remove("hidden");
+      els.reviewRowLine.classList.remove("hidden");
+      els.btnNextLine.classList.add("hidden");
+    } else {
+      els.answerPanelLine.classList.add("hidden");
+      els.reviewRowLine.classList.add("hidden");
+      els.btnNextLine.classList.remove("hidden");
+      els.btnNextLine.disabled = !lineRevealed || isLast;
+    }
+
+    if (lineRevealed && !isLast) {
+      els.btnNextLine.textContent = "다음 줄";
+    } else if (lineRevealed && isLast) {
+      els.btnNextLine.textContent = "다음 줄";
+    }
   }
 
   function nextQuestion(wrap) {
@@ -306,6 +391,13 @@
     showPracticeCard();
   });
 
+  els.practiceMode.addEventListener("change", () => {
+    lineIdx = 0;
+    lineRevealed = false;
+    lastLineQuizEntryId = "";
+    showPracticeCard();
+  });
+
   els.btnReveal.addEventListener("click", () => {
     els.answerPanel.classList.remove("hidden");
     els.reviewRow.classList.remove("hidden");
@@ -337,6 +429,63 @@
     const id = practiceOrder[practiceIndex];
     if (id && kind) recordReview(id, kind);
     nextQuestion(true);
+  });
+
+  els.btnRevealLine.addEventListener("click", () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    if (!entry) return;
+    const lines = splitAnswerLines(entry.answer);
+    lineRevealed = true;
+    updateLineQuizUI(entry, lines);
+  });
+
+  els.btnNextLine.addEventListener("click", () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    if (!entry) return;
+    const lines = splitAnswerLines(entry.answer);
+    if (!lineRevealed || lineIdx >= lines.length - 1) return;
+    lineIdx++;
+    lineRevealed = false;
+    els.selfAttemptLine.value = "";
+    updateLineQuizUI(entry, lines);
+  });
+
+  els.btnPrevLine.addEventListener("click", () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    if (!entry) return;
+    const lines = splitAnswerLines(entry.answer);
+    if (lineIdx <= 0) return;
+    lineIdx--;
+    lineRevealed = false;
+    els.selfAttemptLine.value = "";
+    updateLineQuizUI(entry, lines);
+  });
+
+  els.reviewRowLine.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-review-line]");
+    if (!btn) return;
+    const kind = btn.getAttribute("data-review-line");
+    const id = practiceOrder[practiceIndex];
+    if (id && kind) recordReview(id, kind);
+    nextQuestion(true);
+  });
+
+  els.btnCopyAnswerLine.addEventListener("click", async () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    const text = entry ? entry.answer : "";
+    try {
+      await navigator.clipboard.writeText(text);
+      els.btnCopyAnswerLine.textContent = "복사됨";
+      setTimeout(() => {
+        els.btnCopyAnswerLine.textContent = "복사";
+      }, 1500);
+    } catch {
+      els.btnCopyAnswerLine.textContent = "복사 실패";
+    }
   });
 
   els.entryForm.addEventListener("submit", (ev) => {

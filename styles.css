@@ -565,3 +565,78 @@ body {
   border-radius: 4px;
   word-break: break-all;
 }
+
+.mode-hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(201, 162, 39, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(201, 162, 39, 0.25);
+}
+
+.mode-hint strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+
+.field-hint strong {
+  color: var(--accent);
+}
+
+.line-quiz-head {
+  margin-bottom: 0.75rem;
+}
+
+.line-progress {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 0.35rem;
+}
+
+.line-instruction {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.line-mask-wrap {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.line-mask-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.line-masked {
+  font-family: var(--font-en);
+  font-size: 1rem;
+  color: #6a7384;
+  font-style: italic;
+  margin: 0;
+  min-height: 2.5rem;
+}
+
+.line-revealed {
+  margin: 0;
+  padding-top: 0.25rem;
+}
+
+.actions-line {
+  flex-wrap: wrap;
+}
