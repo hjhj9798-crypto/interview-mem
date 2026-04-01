@@ -616,6 +616,21 @@ body {
   word-break: keep-all;
 }
 
+.line-kr-empty-hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  line-height: 1.45;
+}
+
+.line-kr-empty-hint strong {
+  color: #c5cad6;
+}
+
 .line-kr-align-note {
   font-size: 0.8125rem;
   color: #9eb6d9;
@@ -754,6 +769,13 @@ body {
 .blank-input.blank-wrong {
   border-color: rgba(201, 74, 74, 0.65);
   background: rgba(201, 74, 74, 0.08);
+}
+
+.blank-line-skip {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .blank-feedback {

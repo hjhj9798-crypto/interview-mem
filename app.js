@@ -30,13 +30,14 @@
           .split(/[\n,]+/)
           .map((s) => s.trim())
           .filter(Boolean);
+    const answerKrRaw = e.answerKr != null ? String(e.answerKr) : e.answer_kr != null ? String(e.answer_kr) : "";
     return {
       id: e.id || uid(),
       tag: String(e.tag || "").trim(),
       question: String(e.question || "").trim(),
       keywords,
       answer: String(e.answer || "").trim(),
-      answerKr: e.answerKr != null ? String(e.answerKr) : "",
+      answerKr: answerKrRaw,
       reviews: e.reviews && typeof e.reviews === "object" ? e.reviews : { ok: 0, partial: 0, miss: 0 },
     };
   }
@@ -82,6 +83,17 @@
   let blankQuizWords = [];
   /** @type {Set<number>} */
   let blankQuizBlankSet = new Set();
+  let blankQuizAnswerLines = [];
+  let blankLineIdx = 0;
+  let blankLineChecked = false;
+  let lastBlankEntryId = "";
+
+  function getEntryKr(entry) {
+    if (!entry) return "";
+    if (entry.answerKr != null && String(entry.answerKr).length) return String(entry.answerKr);
+    if (entry.answer_kr != null && String(entry.answer_kr).length) return String(entry.answer_kr);
+    return "";
+  }
 
   function tokenizeWords(answer) {
     const raw = String(answer || "")
@@ -132,16 +144,80 @@
     });
   }
 
-  function setupBlankQuiz(entry, words) {
-    blankQuizWords = words;
-    blankQuizBlankSet = new Set(pickBlankIndices(words.length));
-    renderBlankInputs(words, blankQuizBlankSet);
-    els.blankProgressMeta.textContent = `빈칸 ${blankQuizBlankSet.size}개 · 전체 ${words.length}단어`;
+  function setupBlankQuizByLine(entry) {
+    blankQuizAnswerLines = splitAnswerLines(entry.answer);
+    if (blankQuizAnswerLines.length === 0) {
+      const t = String(entry.answer || "").trim();
+      blankQuizAnswerLines = t ? [t] : [""];
+    }
+    if (blankLineIdx >= blankQuizAnswerLines.length) {
+      blankLineIdx = Math.max(0, blankQuizAnswerLines.length - 1);
+    }
+    renderCurrentBlankLine(entry);
+  }
+
+  function renderCurrentBlankLine(entry) {
+    blankLineChecked = false;
+    const totalLines = blankQuizAnswerLines.length;
+    const lineText = String(blankQuizAnswerLines[blankLineIdx] || "");
+    const words = tokenizeWords(lineText);
+
+    els.blankWordsWrap.innerHTML = "";
+    els.btnCheckBlank.disabled = false;
+    els.btnShuffleBlank.disabled = false;
+
+    if (words.length === 0) {
+      const p = document.createElement("p");
+      p.className = "blank-line-skip";
+      p.textContent =
+        "이 줄에 빈칸으로 나눌 단어가 없습니다. 「다음 줄」로 넘어가거나 모범 답변에 띄어쓰기를 넣어 주세요.";
+      els.blankWordsWrap.appendChild(p);
+      blankQuizWords = [];
+      blankQuizBlankSet = new Set();
+    } else {
+      blankQuizWords = words;
+      blankQuizBlankSet = new Set(pickBlankIndices(words.length));
+      renderBlankInputs(words, blankQuizBlankSet);
+    }
+
+    const nw = words.length;
+    const nb = blankQuizBlankSet.size;
+    els.blankProgressMeta.textContent = `줄 ${blankLineIdx + 1} / ${totalLines} · 이번 줄 빈칸 ${nb}개 · 단어 ${nw}개`;
     els.blankFeedback.textContent = "";
     els.blankFeedback.classList.add("hidden");
-    els.answerPanelBlank.classList.add("hidden");
-    els.reviewRowBlank.classList.add("hidden");
     els.practiceAnswerBlank.textContent = entry.answer;
+
+    const isLast = blankLineIdx >= totalLines - 1;
+    if (isLast && nw === 0) {
+      blankLineChecked = true;
+      els.answerPanelBlank.classList.remove("hidden");
+      els.reviewRowBlank.classList.remove("hidden");
+      els.btnCheckBlank.disabled = true;
+      els.btnShuffleBlank.disabled = true;
+      els.btnNextBlankLine.classList.add("hidden");
+    } else {
+      els.answerPanelBlank.classList.add("hidden");
+      els.reviewRowBlank.classList.add("hidden");
+      if (!isLast) els.btnNextBlankLine.classList.remove("hidden");
+      else els.btnNextBlankLine.classList.add("hidden");
+    }
+    updateBlankLineNav();
+  }
+
+  function updateBlankLineNav() {
+    const totalLines = blankQuizAnswerLines.length;
+    if (totalLines === 0) return;
+    const lineText = String(blankQuizAnswerLines[blankLineIdx] || "");
+    const words = tokenizeWords(lineText);
+    const isLast = blankLineIdx >= totalLines - 1;
+    els.btnPrevBlankLine.disabled = blankLineIdx <= 0;
+    if (isLast) {
+      els.btnNextBlankLine.classList.add("hidden");
+      return;
+    }
+    els.btnNextBlankLine.classList.remove("hidden");
+    const canNext = words.length === 0 || blankLineChecked;
+    els.btnNextBlankLine.disabled = !canNext;
   }
 
   const els = {
@@ -196,6 +272,7 @@
     lineKrPanel: document.getElementById("lineKrPanel"),
     lineKrText: document.getElementById("lineKrText"),
     lineKrMismatch: document.getElementById("lineKrMismatch"),
+    lineKrEmptyHint: document.getElementById("lineKrEmptyHint"),
     lineKrAlignNote: document.getElementById("lineKrAlignNote"),
     lineInstructionLine: document.getElementById("lineInstructionLine"),
     lineAttemptLabel: document.getElementById("lineAttemptLabel"),
@@ -206,6 +283,8 @@
     blankProgressMeta: document.getElementById("blankProgressMeta"),
     btnCheckBlank: document.getElementById("btnCheckBlank"),
     btnShuffleBlank: document.getElementById("btnShuffleBlank"),
+    btnPrevBlankLine: document.getElementById("btnPrevBlankLine"),
+    btnNextBlankLine: document.getElementById("btnNextBlankLine"),
     answerPanelBlank: document.getElementById("answerPanelBlank"),
     practiceAnswerBlank: document.getElementById("practiceAnswerBlank"),
     reviewRowBlank: document.getElementById("reviewRowBlank"),
@@ -277,11 +356,12 @@
 
     const lines = splitAnswerLines(entry.answer);
     const words = tokenizeWords(entry.answer);
+    const answerTrim = String(entry.answer || "").trim();
     const mode = els.practiceMode.value;
     const wantByline = mode === "byline";
     const useByline = wantByline && lines.length >= 2;
     const wantBlank = mode === "blank";
-    const useBlank = wantBlank && words.length >= 1;
+    const useBlank = wantBlank && answerTrim.length > 0;
 
     if (lastLineQuizEntryId !== entry.id) {
       lineIdx = 0;
@@ -299,10 +379,15 @@
       els.practiceAnswerLine.textContent = entry.answer;
       updateLineQuizUI(entry, lines);
     } else if (useBlank) {
+      if (lastBlankEntryId !== entry.id) {
+        blankLineIdx = 0;
+        blankLineChecked = false;
+        lastBlankEntryId = entry.id;
+      }
       els.practiceBlockFull.classList.add("hidden");
       els.practiceBlockLine.classList.add("hidden");
       els.practiceBlockBlank.classList.remove("hidden");
-      setupBlankQuiz(entry, words);
+      setupBlankQuizByLine(entry);
     } else {
       els.practiceBlockFull.classList.remove("hidden");
       els.practiceBlockLine.classList.add("hidden");
@@ -322,15 +407,21 @@
   function updateLineQuizUI(entry, lines) {
     const total = lines.length;
     const cur = lines[lineIdx] || "";
-    const krRaw = String(entry.answerKr || "").trim();
-    const { aligned: krAligned, padded, truncated } = alignKrToEnLines(entry.answerKr || "", total);
+    const krText = getEntryKr(entry).replace(/^\uFEFF/, "");
+    const krRaw = krText.trim();
+    const { aligned: krAligned, padded, truncated } = alignKrToEnLines(krText, total);
     const hasKr =
-      total >= 2 && krRaw.length > 0 && krAligned.some((s) => s.length > 0);
+      total >= 2 &&
+      krRaw.length > 0 &&
+      krAligned.some((s) => String(s).trim().length > 0);
 
     els.lineProgressText.textContent = `줄 ${lineIdx + 1} / ${total}`;
     els.lineRevealedText.textContent = cur;
 
     els.lineKrPanel.classList.toggle("hidden", !hasKr);
+    if (els.lineKrEmptyHint) {
+      els.lineKrEmptyHint.classList.toggle("hidden", hasKr || total < 2);
+    }
     els.lineKrMismatch.classList.toggle("hidden", !truncated || !hasKr);
     if (hasKr && padded) {
       els.lineKrAlignNote.textContent =
@@ -488,7 +579,7 @@
     els.fieldQuestion.value = e.question;
     els.fieldKeywords.value = e.keywords.join(", ");
     els.fieldAnswer.value = e.answer;
-    els.fieldAnswerKr.value = e.answerKr != null ? e.answerKr : "";
+    els.fieldAnswerKr.value = getEntryKr(e);
     els.formTitle.textContent = "항목 편집";
     els.btnCancelEdit.classList.remove("hidden");
     els.fieldQuestion.focus();
@@ -546,6 +637,9 @@
     lineIdx = 0;
     lineRevealed = false;
     lastLineQuizEntryId = "";
+    lastBlankEntryId = "";
+    blankLineIdx = 0;
+    blankLineChecked = false;
     showPracticeCard();
   });
 
@@ -640,9 +734,12 @@
   });
 
   els.btnCheckBlank.addEventListener("click", () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
     const inputs = els.blankWordsWrap.querySelectorAll("input.blank-input");
     let correct = 0;
-    const total = inputs.length;
+    const totalInp = inputs.length;
+    if (totalInp === 0) return;
     inputs.forEach((inp) => {
       const i = Number(inp.dataset.index);
       const expected = blankQuizWords[i];
@@ -656,21 +753,56 @@
         inp.title = "정답: " + expected;
       }
     });
-    els.blankFeedback.textContent =
-      total > 0
-        ? `빈칸 ${total}개 중 ${correct}개 일치. 틀린 칸은 입력란에 마우스를 올리면 정답 힌트가 보입니다.`
-        : "";
+    blankLineChecked = true;
+    const totalLines = blankQuizAnswerLines.length;
+    const isLast = blankLineIdx >= totalLines - 1;
+    els.blankFeedback.textContent = `빈칸 ${totalInp}개 중 ${correct}개 일치. 틀린 칸은 입력란에 마우스를 올리면 정답 힌트가 보입니다.`;
     els.blankFeedback.classList.remove("hidden");
-    els.answerPanelBlank.classList.remove("hidden");
-    els.reviewRowBlank.classList.remove("hidden");
+    if (isLast && entry) {
+      els.answerPanelBlank.classList.remove("hidden");
+      els.reviewRowBlank.classList.remove("hidden");
+      els.btnNextBlankLine.classList.add("hidden");
+    } else {
+      els.answerPanelBlank.classList.add("hidden");
+      els.reviewRowBlank.classList.add("hidden");
+      els.btnNextBlankLine.classList.remove("hidden");
+      els.btnNextBlankLine.disabled = false;
+    }
+    updateBlankLineNav();
   });
 
   els.btnShuffleBlank.addEventListener("click", () => {
+    const lineText = String(blankQuizAnswerLines[blankLineIdx] || "");
+    const words = tokenizeWords(lineText);
+    if (words.length === 0) return;
+    blankQuizWords = words;
+    blankQuizBlankSet = new Set(pickBlankIndices(words.length));
+    renderBlankInputs(words, blankQuizBlankSet);
+    blankLineChecked = false;
+    els.blankFeedback.classList.add("hidden");
+    const totalLines = blankQuizAnswerLines.length;
+    const nb = blankQuizBlankSet.size;
+    const nw = words.length;
+    els.blankProgressMeta.textContent = `줄 ${blankLineIdx + 1} / ${totalLines} · 이번 줄 빈칸 ${nb}개 · 단어 ${nw}개`;
+    updateBlankLineNav();
+  });
+
+  els.btnNextBlankLine.addEventListener("click", () => {
     const id = practiceOrder[practiceIndex];
     const entry = entryById(id);
     if (!entry) return;
-    const w = tokenizeWords(entry.answer);
-    setupBlankQuiz(entry, w);
+    if (blankLineIdx >= blankQuizAnswerLines.length - 1) return;
+    blankLineIdx++;
+    renderCurrentBlankLine(entry);
+  });
+
+  els.btnPrevBlankLine.addEventListener("click", () => {
+    const id = practiceOrder[practiceIndex];
+    const entry = entryById(id);
+    if (!entry) return;
+    if (blankLineIdx <= 0) return;
+    blankLineIdx--;
+    renderCurrentBlankLine(entry);
   });
 
   els.reviewRowBlank.addEventListener("click", (ev) => {
