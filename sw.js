@@ -18,7 +18,18 @@ self.addEventListener("activate", (event) => {
 });
 
 function isAppShellUrl(url) {
-  return /\/(index\.html|app\.js|styles\.css)(\?|$)/.test(url) || url.endsWith("/interview-mem/") || url.endsWith("/interview-mem");
+  try {
+    const p = new URL(url).pathname;
+    return (
+      p.endsWith("/app.js") ||
+      p.endsWith("/styles.css") ||
+      p.endsWith("/index.html") ||
+      p === "/interview-mem" ||
+      p.endsWith("/interview-mem/")
+    );
+  } catch {
+    return false;
+  }
 }
 
 self.addEventListener("fetch", (event) => {
