@@ -3,6 +3,20 @@
 
   const STORAGE_KEY = "interviewMemEntries_v1";
 
+  /** 등록·연습 필터용 고정 태그 (자유 입력 대신 선택) */
+  const TAG_OPTIONS = [
+    "Essential",
+    "Modelling",
+    "Pipeline",
+    "Troubleshooting",
+    "add",
+    "portfolio",
+    "strength",
+    "teamwork",
+    "마지막 질문",
+    "인사",
+  ];
+
   /** @typedef {{ id: string, tag: string, question: string, keywords: string[], answer: string, answerKr?: string, reviews?: { ok: number, partial: number, miss: number } }} Entry */
 
   function uid() {
@@ -57,15 +71,15 @@
   let lineRevealed = false;
   let lastLineQuizEntryId = "";
 
+  /** Enter로 나눈 줄을 그대로 유지(빈 줄 포함). 영·한 줄 번호를 맞추기 위해 비어 있는 줄도 인덱스를 차지합니다. */
   function splitAnswerLines(answer) {
     return String(answer || "")
       .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+      .map((s) => s.trim());
   }
 
   /**
-   * 한국어는 줄 수가 영어와 달라도 됨: 부족하면 빈 줄로 채우고, 넘치면 잘라냄.
+   * 한국어 줄을 영어 줄 인덱스에 1:1로 맞춤(빈 줄 포함). 부족하면 빈 칸, 넘치면 잘림.
    * @returns {{ aligned: string[], padded: boolean, truncated: boolean }}
    */
   function alignKrToEnLines(krText, enLineCount) {
@@ -73,10 +87,49 @@
       .split(/\r?\n/)
       .map((s) => s.trim());
     const truncated = rows.length > enLineCount;
-    const aligned = rows.slice(0, enLineCount);
-    while (aligned.length < enLineCount) aligned.push("");
+    const aligned = [];
+    for (let i = 0; i < enLineCount; i++) {
+      aligned.push(i < rows.length ? rows[i] : "");
+    }
     const padded = rows.length < enLineCount;
     return { aligned, padded, truncated };
+  }
+
+  function entriesMatchTag(entryTag, filterVal) {
+    const a = String(entryTag || "").trim();
+    const b = String(filterVal || "").trim();
+    if (!b) return true;
+    if (!a) return false;
+    return a.toLowerCase() === b.toLowerCase();
+  }
+
+  /** 연습·목록 필터용: 고정 태그 + 데이터에만 있는 문자열 */
+  function allTagsForFilters() {
+    const set = new Set(TAG_OPTIONS);
+    entries.forEach((e) => {
+      const t = String(e.tag || "").trim();
+      if (t) set.add(t);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, "ko"));
+  }
+
+  function populateFormTagSelect(preserveValue) {
+    const sel = els.fieldTag;
+    const prev = preserveValue != null ? preserveValue : sel.value;
+    sel.innerHTML = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "태그 없음";
+    sel.appendChild(none);
+    TAG_OPTIONS.forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+    const ok = [...sel.options].some((o) => o.value === prev);
+    if (ok) sel.value = prev;
+    else sel.value = "";
   }
 
   /** 빈칸 퀴즈: 띄어쓰기 기준 토큰 */
@@ -101,11 +154,9 @@
       .replace(/\r?\n/g, " ")
       .trim();
     let w = raw.split(/\s+/).filter(Boolean);
-    if (w.length === 0) {
-      const lines = splitAnswerLines(answer);
-      if (lines.length >= 1) return lines;
-    }
-    return w;
+    if (w.length > 0) return w;
+    const lines = splitAnswerLines(answer).filter(Boolean);
+    return lines.length > 0 ? lines : [];
   }
 
   function pickBlankIndices(n) {
@@ -316,6 +367,8 @@
     formTitle: document.getElementById("formTitle"),
     editId: document.getElementById("editId"),
     fieldTag: document.getElementById("fieldTag"),
+    manageFilterTag: document.getElementById("manageFilterTag"),
+    entryCountNote: document.getElementById("entryCountNote"),
     fieldQuestion: document.getElementById("fieldQuestion"),
     fieldKeywords: document.getElementById("fieldKeywords"),
     fieldAnswer: document.getElementById("fieldAnswer"),
@@ -368,9 +421,9 @@
   };
 
   function getFilteredEntries() {
-    const tag = els.filterTag.value.trim().toLowerCase();
+    const tag = els.filterTag.value.trim();
     if (!tag) return entries.slice();
-    return entries.filter((e) => (e.tag || "").toLowerCase() === tag);
+    return entries.filter((e) => entriesMatchTag(e.tag, tag));
   }
 
   function rebuildPracticeOrder() {
@@ -583,35 +636,57 @@
     }
   }
 
+  function restoreSelectValue(selectEl, previous) {
+    const list = [...selectEl.options].map((o) => o.value);
+    const match = list.find((v) => v.toLowerCase() === String(previous || "").toLowerCase());
+    if (match) selectEl.value = match;
+  }
+
   function updateTagFilterOptions() {
-    const tags = new Set();
-    entries.forEach((e) => {
-      if (e.tag) tags.add(e.tag.trim());
-    });
-    const current = els.filterTag.value;
+    const tags = allTagsForFilters();
+    const curF = els.filterTag.value;
+    const curM = els.manageFilterTag.value;
     els.filterTag.innerHTML = '<option value="">전체</option>';
-    [...tags].sort().forEach((t) => {
-      const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = t;
-      els.filterTag.appendChild(opt);
+    els.manageFilterTag.innerHTML = '<option value="">전체</option>';
+    tags.forEach((t) => {
+      const o1 = document.createElement("option");
+      o1.value = t;
+      o1.textContent = t;
+      els.filterTag.appendChild(o1);
+      const o2 = document.createElement("option");
+      o2.value = t;
+      o2.textContent = t;
+      els.manageFilterTag.appendChild(o2);
     });
-    if ([...tags].includes(current)) els.filterTag.value = current;
+    restoreSelectValue(els.filterTag, curF);
+    restoreSelectValue(els.manageFilterTag, curM);
   }
 
   function renderEntryList() {
-    els.entryCount.textContent = String(entries.length);
+    const filterTag = els.manageFilterTag.value.trim();
+    let list = entries.slice();
+    if (filterTag) list = list.filter((e) => entriesMatchTag(e.tag, filterTag));
+
+    els.entryCount.textContent = String(list.length);
+    if (els.entryCountNote) {
+      if (filterTag && entries.length !== list.length) {
+        els.entryCountNote.textContent = ` · 전체 ${entries.length}개`;
+      } else {
+        els.entryCountNote.textContent = "";
+      }
+    }
+
     els.entryList.innerHTML = "";
-    if (entries.length === 0) {
+    if (list.length === 0) {
       const li = document.createElement("li");
       li.className = "entry-item";
-      li.textContent = "항목이 없습니다.";
+      li.textContent = entries.length === 0 ? "항목이 없습니다." : "이 태그에 해당하는 항목이 없습니다.";
       li.style.color = "var(--muted)";
       els.entryList.appendChild(li);
       return;
     }
 
-    const sorted = entries.slice().sort((a, b) => a.question.localeCompare(b.question));
+    const sorted = list.sort((a, b) => a.question.localeCompare(b.question));
     sorted.forEach((e) => {
       const li = document.createElement("li");
       li.className = "entry-item";
@@ -654,7 +729,15 @@
     const e = entryById(id);
     if (!e) return;
     els.editId.value = e.id;
-    els.fieldTag.value = e.tag || "";
+    populateFormTagSelect();
+    const t = String(e.tag || "").trim();
+    if (t && !TAG_OPTIONS.includes(t)) {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = `${t} (기존)`;
+      els.fieldTag.appendChild(opt);
+    }
+    els.fieldTag.value = t || "";
     els.fieldQuestion.value = e.question;
     els.fieldKeywords.value = e.keywords.join(", ");
     els.fieldAnswer.value = e.answer;
@@ -667,6 +750,7 @@
   function cancelEdit() {
     els.editId.value = "";
     els.entryForm.reset();
+    populateFormTagSelect();
     els.formTitle.textContent = "새 항목 추가";
     els.btnCancelEdit.classList.add("hidden");
   }
@@ -710,6 +794,10 @@
     practiceIndex = 0;
     orderDirty = true;
     showPracticeCard();
+  });
+
+  els.manageFilterTag.addEventListener("change", () => {
+    renderEntryList();
   });
 
   els.practiceMode.addEventListener("change", () => {
@@ -1023,6 +1111,7 @@
   });
 
   // Init
+  populateFormTagSelect();
   orderDirty = true;
   updateTagFilterOptions();
   showPracticeCard();

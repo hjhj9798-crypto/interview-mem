@@ -472,6 +472,17 @@ body {
   font-weight: 400;
 }
 
+.count-note {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.9em;
+}
+
+.list-tag-filter span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .list-tools {
   display: flex;
   flex-wrap: wrap;

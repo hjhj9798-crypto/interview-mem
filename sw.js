@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE = "interview-mem-v15";
+const CACHE = "interview-mem-v16";
 const ASSETS = ["./index.html", "./styles.css", "./app.js", "./icon.svg", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

@@ -112,7 +112,7 @@
                 <p class="line-kr-text" id="lineKrText"></p>
               </div>
               <div class="line-kr-empty-hint hidden" id="lineKrEmptyHint">
-                한국어가 보이지 않으면 「등록 · 편집」에서 <strong>한 줄씩용 한국어</strong> 칸에 번역을 넣고 저장했는지 확인하세요. 영어와 줄 수가 달라도 됩니다.
+                한국어가 보이지 않으면 「등록 · 편집」에서 <strong>한 줄씩용 한국어</strong> 칸에 번역을 넣고 저장했는지 확인하세요. 영어와 같은 위치에 Enter로 줄을 맞춰 주세요.
               </div>
               <p class="line-kr-align-note hidden" id="lineKrAlignNote"></p>
               <p class="line-kr-mismatch hidden" id="lineKrMismatch">
@@ -208,8 +208,8 @@
             <input type="hidden" id="editId" value="" />
 
             <label class="field">
-              <span>태그 (선택, 예: behavioral, technical)</span>
-              <input type="text" id="fieldTag" class="input" placeholder="behavioral" />
+              <span>태그 (선택)</span>
+              <select id="fieldTag" class="select"></select>
             </label>
 
             <label class="field">
@@ -231,7 +231,7 @@
             <label class="field">
               <span>한 줄씩용 한국어 (선택)</span>
               <textarea id="fieldAnswerKr" class="textarea" rows="8" placeholder="영어와 같은 줄 수로, 줄마다 한국어 번역을 적습니다."></textarea>
-              <span class="field-hint">영어와 <strong>줄 수가 달라도 됩니다.</strong> 한국어가 더 짧으면 남는 영어 줄은 한국어 없이 연습하고, 더 길면 뒷줄은 잘립니다.</span>
+              <span class="field-hint"><strong>Enter로 줄을 나눈 순서</strong>가 영어와 한국어에서 같아야 합니다(빈 줄도 위치가 같으면 그대로 반영). 한국어 줄이 더 적으면 그 줄은 생략 안내가 나오고, 더 많으면 남는 한국어 줄은 사용되지 않습니다.</span>
             </label>
 
             <div class="form-actions">
@@ -242,8 +242,14 @@
 
           <div class="list-card">
             <div class="list-head">
-              <h3>저장된 항목 <span class="count" id="entryCount">0</span></h3>
+              <h3>
+                저장된 항목 <span class="count" id="entryCount">0</span><span id="entryCountNote" class="count-note"></span>
+              </h3>
               <div class="list-tools">
+                <label class="field-inline list-tag-filter">
+                  <span>태그</span>
+                  <select id="manageFilterTag" class="select" title="목록을 태그로 걸러 보기"></select>
+                </label>
                 <button type="button" class="btn-text" id="btnExport">JSON 내보내기</button>
                 <label class="btn-text file-pick">
                   JSON 가져오기
