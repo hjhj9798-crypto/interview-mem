@@ -797,18 +797,19 @@ body {
   font-size: 1.02rem;
   line-height: 1.65;
   margin-bottom: 0.5rem;
-  padding: 0.65rem 0.5rem 0.65rem 0.45rem;
+  padding: 0.55rem 0.45rem 0.55rem 0.35rem;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 8px;
   border-left: 3px solid var(--accent);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.3rem 0;
-  column-gap: 0;
+  /* flex 제거: 플렉스 줄 안에서 단어·빈칸이 가로로 벌어지는 문제 방지 */
+  display: block;
+  text-align: left;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .blank-visible-word {
+  display: inline;
   color: #dce1ea;
 }
 
@@ -819,9 +820,9 @@ body {
   width: 9.5ch;
   max-width: min(100%, 12ch);
   min-width: 7ch;
-  flex: 0 0 auto;
-  padding: 0.15rem 0.25rem;
+  padding: 0.1rem 0.2rem;
   margin: 0;
+  vertical-align: baseline;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
