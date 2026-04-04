@@ -134,15 +134,14 @@
     return normalize(user) === normalize(expected);
   }
 
-  /** 힌트: 단어 길이의 약 1/3만큼 앞쪽 스펠링 + 나머지는 · */
+  /** 힌트: 앞쪽 약 1/3 스펠링 + … (길이는 드러내지 않음) */
   function hintFirstLetters(word) {
     const w = String(word || "");
     const n = w.length;
     if (n === 0) return "";
     const showLen = Math.max(1, Math.ceil(n / 3));
     const prefix = w.slice(0, Math.min(showLen, n));
-    const rest = n - prefix.length;
-    return rest > 0 ? prefix + "·".repeat(rest) : prefix;
+    return n > showLen ? prefix + "…" : prefix;
   }
 
   function updateBlankHintButton() {
@@ -163,14 +162,6 @@
     });
   }
 
-  function setBlankInputWidth(inp, word) {
-    const n = String(word || "").length;
-    const ch = Math.min(Math.max(n + 1, 3), 22);
-    inp.style.width = `min(100%, ${ch}ch)`;
-    inp.style.flex = "0 0 auto";
-    inp.style.maxWidth = "min(100%, 22ch)";
-  }
-
   function renderBlankInputs(words, blankSet) {
     els.blankWordsWrap.innerHTML = "";
     words.forEach((w, i) => {
@@ -187,7 +178,6 @@
         inp.setAttribute("autocomplete", "off");
         inp.setAttribute("spellcheck", "true");
         inp.placeholder = blankHintVisible ? hintFirstLetters(w) : "…";
-        setBlankInputWidth(inp, w);
         cluster.appendChild(inp);
         const reveal = document.createElement("span");
         reveal.className = "blank-reveal";
