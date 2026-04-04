@@ -751,17 +751,9 @@ body {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.2rem;
-  vertical-align: top;
+  gap: 0.15rem;
+  vertical-align: baseline;
   max-width: 100%;
-}
-
-.blank-hint {
-  font-family: var(--font-en);
-  font-size: 0.8rem;
-  color: var(--accent);
-  letter-spacing: 0.02em;
-  min-height: 1.1em;
 }
 
 .blank-reveal {
@@ -821,14 +813,17 @@ body {
 .blank-input {
   font-family: var(--font-en);
   font-size: 1rem;
-  min-width: 4.5rem;
-  max-width: 100%;
-  flex: 1 1 6rem;
-  padding: 0.35rem 0.5rem;
+  box-sizing: content-box;
+  padding: 0.2rem 0.35rem;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--text);
+}
+
+.blank-input::placeholder {
+  color: rgba(201, 162, 39, 0.75);
+  opacity: 1;
 }
 
 .blank-input:focus {

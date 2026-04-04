@@ -152,20 +152,23 @@
   }
 
   function applyBlankHints() {
-    els.blankWordsWrap.querySelectorAll(".blank-input-cluster").forEach((cluster) => {
-      const inp = cluster.querySelector("input.blank-input");
-      const hint = cluster.querySelector(".blank-hint");
-      if (!inp || !hint) return;
+    els.blankWordsWrap.querySelectorAll("input.blank-input").forEach((inp) => {
       const i = Number(inp.dataset.index);
       const w = blankQuizWords[i];
       if (blankHintVisible) {
-        hint.textContent = hintFirstLetters(w);
-        hint.hidden = false;
+        inp.placeholder = hintFirstLetters(w);
       } else {
-        hint.textContent = "";
-        hint.hidden = true;
+        inp.placeholder = "…";
       }
     });
+  }
+
+  function setBlankInputWidth(inp, word) {
+    const n = String(word || "").length;
+    const ch = Math.min(Math.max(n + 1, 3), 22);
+    inp.style.width = `min(100%, ${ch}ch)`;
+    inp.style.flex = "0 0 auto";
+    inp.style.maxWidth = "min(100%, 22ch)";
   }
 
   function renderBlankInputs(words, blankSet) {
@@ -183,12 +186,9 @@
         inp.dataset.index = String(i);
         inp.setAttribute("autocomplete", "off");
         inp.setAttribute("spellcheck", "true");
-        inp.placeholder = "…";
+        inp.placeholder = blankHintVisible ? hintFirstLetters(w) : "…";
+        setBlankInputWidth(inp, w);
         cluster.appendChild(inp);
-        const hint = document.createElement("span");
-        hint.className = "blank-hint";
-        hint.hidden = true;
-        cluster.appendChild(hint);
         const reveal = document.createElement("span");
         reveal.className = "blank-reveal";
         reveal.hidden = true;
@@ -448,6 +448,9 @@
     const useByline = wantByline && lines.length >= 2;
     const wantBlank = mode === "blank";
     const useBlank = wantBlank && answerTrim.length > 0;
+
+    const keywordsBlock = els.practiceKeywords.closest(".keywords-block");
+    if (keywordsBlock) keywordsBlock.classList.toggle("hidden", useBlank);
 
     if (lastLineQuizEntryId !== entry.id) {
       lineIdx = 0;
